@@ -1,3 +1,3 @@
-flask
-markitdown
+flask>=2.0
+markitdown[all]
 gunicorn

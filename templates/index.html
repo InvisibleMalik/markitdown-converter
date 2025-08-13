@@ -1,24 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="upload-area" id="upload-area">
-    <p>Drag & drop a file here or <label for="file-input">browse</label></p>
-    <input type="file" id="file-input" style="display:none">
-</div>
-<button id="convert-btn">Convert to Markdown</button>
+<div class="row g-4">
+  <div class="col-12">
+    <h1 class="display-6">Choose a conversion</h1>
+    <p class="text-muted">Pick one of the tasks below. Each task page provides a dedicated UI (like iLovePDF).</p>
+  </div>
 
-<div id="loading" class="hidden">
-    <div class="spinner"></div>
-    <p>Converting...</p>
-</div>
-
-<div id="result-area" class="hidden">
-    <textarea id="markdown-output" rows="15" readonly></textarea>
-    <div class="button-group">
-        <button onclick="copyMarkdown()">📋 Copy</button>
-        <form method="POST" action="/download">
-            <input type="hidden" name="markdown" id="download-markdown">
-            <button type="submit">💾 Download .md</button>
-        </form>
+  {% for slug, t in tasks.items() %}
+  <div class="col-sm-6 col-lg-4">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body d-flex flex-column">
+        <h5 class="card-title">{{ t.title }}</h5>
+        <p class="card-text text-muted flex-grow-1">{{ t.description }}</p>
+        <a href="{{ url_for('task_page', task_slug=slug) }}" class="btn btn-primary mt-2">Open</a>
+      </div>
     </div>
+  </div>
+  {% endfor %}
 </div>
 {% endblock %}

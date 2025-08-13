@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: markitdown-converter
+    name: markitdown-upgraded
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
