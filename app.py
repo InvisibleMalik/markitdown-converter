@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 import shutil
 from flask import Flask, request, render_template, jsonify, send_file, redirect, url_for, make_response
@@ -7,7 +8,6 @@ from markitdown import MarkItDown
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB
 
-# ---- Tasks (fixed; no stray comma/quote) ----
 TASKS = {
     "pdf-to-md": {
         "title": "PDF to Markdown",
@@ -47,7 +47,6 @@ TASKS = {
     }
 }
 
-# Make TASKS available in all templates (nav, index, etc.)
 @app.context_processor
 def inject_tasks():
     return dict(tasks=TASKS)
@@ -59,7 +58,21 @@ def allowed_file_for_task(filename: str, task_slug: str) -> bool:
     allowed = TASKS.get(task_slug, {}).get("extensions", [])
     return True if not allowed else ext in allowed
 
-# -------- Routes --------
+def polish_markdown(md: str) -> str:
+    """Light cleanup to feel modern/GitHuby without changing content semantics."""
+    if not md:
+        return ""
+    # Normalize line endings
+    md = md.replace("\r\n", "\n").replace("\r", "\n")
+    # Collapse 3+ blank lines to max 2
+    md = re.sub(r"\n{3,}", "\n\n", md)
+    # Trim trailing spaces
+    md = re.sub(r"[ \t]+\n", "\n", md)
+    # Ensure file ends with single newline
+    if not md.endswith("\n"):
+        md += "\n"
+    return md
+
 @app.route("/")
 def index():
     return render_template(
@@ -96,9 +109,9 @@ def api_convert():
         local_path = os.path.join(temp_dir, f.filename)
         f.save(local_path)
 
-        md = MarkItDown()
-        result = md.convert(local_path)
-        markdown_text = result.text_content or ""
+        md_engine = MarkItDown()
+        result = md_engine.convert(local_path)
+        markdown_text = polish_markdown(result.text_content or "")
 
         return jsonify({"markdown": markdown_text, "filename": f.filename})
     except Exception as e:
