@@ -3,14 +3,19 @@ document.addEventListener("DOMContentLoaded", function () {
   const fileInput = document.getElementById("file-input");
   const browseLink = document.getElementById("browse-link");
   const convertBtn = document.getElementById("convert-btn");
-  const progress = document.getElementById("progress");
+  const progressWrap = document.getElementById("progress-wrap");
+  const uploadBar = document.getElementById("upload-bar");
+  const processBar = document.getElementById("process-bar");
   const resultPanel = document.getElementById("result-panel");
   const output = document.getElementById("markdown-output");
+  const preview = document.getElementById("markdown-preview");
   const copyBtn = document.getElementById("copy-btn");
   const downloadMarkdown = document.getElementById("download-markdown");
   const downloadName = document.getElementById("download-name");
   const selectedFile = document.getElementById("selected-file");
   const errorBox = document.getElementById("error-box");
+  const progressLabel = document.getElementById("progress-label");
+  const resultFilename = document.getElementById("result-filename");
   const taskSlugEl = document.getElementById("task-slug");
   const taskSlug = taskSlugEl ? taskSlugEl.value : "any-to-md";
 
@@ -20,15 +25,17 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   function hideError() { errorBox.classList.add("d-none"); }
 
-  // drag/drop & selection
-  drop.addEventListener("click", () => fileInput.click());
+  // Drag & drop
+  drop.addEventListener("click", (e) => { e.preventDefault(); fileInput.click(); });
   browseLink.addEventListener("click", (e) => { e.preventDefault(); fileInput.click(); });
 
-  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("dragover"); });
-  drop.addEventListener("dragleave", (e) => { e.preventDefault(); drop.classList.remove("dragover"); });
+  ["dragover","dragenter"].forEach(evt =>
+    drop.addEventListener(evt, e => { e.preventDefault(); drop.classList.add("dragover"); })
+  );
+  ["dragleave","drop"].forEach(evt =>
+    drop.addEventListener(evt, e => { e.preventDefault(); drop.classList.remove("dragover"); })
+  );
   drop.addEventListener("drop", (e) => {
-    e.preventDefault();
-    drop.classList.remove("dragover");
     if (e.dataTransfer.files && e.dataTransfer.files.length) {
       fileInput.files = e.dataTransfer.files;
       showSelectedFile();
@@ -48,7 +55,8 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  convertBtn.addEventListener("click", async () => {
+  // Convert with upload progress
+  convertBtn && convertBtn.addEventListener("click", async () => {
     hideError();
     if (!fileInput.files || fileInput.files.length === 0) {
       return showError("Please select a file first.");
@@ -62,37 +70,83 @@ document.addEventListener("DOMContentLoaded", function () {
     fd.append("file", file);
     fd.append("task", taskSlug);
 
-    progress.classList.remove("d-none");
-    output.value = "";
+    progressWrap.classList.remove("d-none");
+    uploadBar.style.width = "0%";
+    uploadBar.textContent = "0%";
+    processBar.style.visibility = "hidden";
     resultPanel.classList.add("d-none");
     convertBtn.disabled = true;
 
     try {
-      const res = await fetch("/api/convert", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!res.ok) {
-        showError(json.error || "Conversion failed");
-      } else {
-        const md = json.markdown || "";
-        output.value = md;
-        downloadMarkdown.value = md;
-        const original = json.filename || "converted";
-        downloadName.value = original.replace(/\.[^/.]+$/, "") + ".md";
-        resultPanel.classList.remove("d-none");
-        resultPanel.scrollIntoView({ behavior: "smooth" });
-      }
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/convert", true);
+
+      // Upload progress
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          uploadBar.style.width = pct + "%";
+          uploadBar.textContent = pct + "%";
+          progressLabel.textContent = "Uploading…";
+          if (pct >= 100) {
+            // Switch to processing state
+            progressLabel.textContent = "Processing…";
+            processBar.style.visibility = "visible";
+          }
+        }
+      };
+
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+          convertBtn.disabled = false;
+          progressWrap.classList.add("d-none");
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const json = JSON.parse(xhr.responseText);
+            const md = json.markdown || "";
+            const original = json.filename || "converted";
+            const mdName = original.replace(/\.[^/.]+$/, "") + ".md";
+
+            // Fill outputs
+            output.value = md;
+            downloadMarkdown.value = md;
+            downloadName.value = mdName;
+            resultFilename.textContent = mdName;
+
+            // Live preview (GitHub style)
+            try {
+              const html = window.marked ? window.marked.parse(md) : md;
+              preview.innerHTML = html;
+            } catch {
+              preview.textContent = md;
+            }
+
+            resultPanel.classList.remove("d-none");
+            resultPanel.scrollIntoView({ behavior: "smooth" });
+          } else {
+            try {
+              const err = JSON.parse(xhr.responseText);
+              showError(err.error || "Conversion failed.");
+            } catch {
+              showError("Conversion failed.");
+            }
+          }
+        }
+      };
+
+      xhr.send(fd);
     } catch (err) {
-      showError("Network or server error: " + err.message);
-    } finally {
-      progress.classList.add("d-none");
       convertBtn.disabled = false;
+      progressWrap.classList.add("d-none");
+      showError("Network or server error: " + err.message);
     }
   });
 
+  // Copy
   copyBtn && copyBtn.addEventListener("click", function () {
     output.select();
     document.execCommand("copy");
+    const old = copyBtn.textContent;
     copyBtn.textContent = "✅ Copied";
-    setTimeout(() => copyBtn.textContent = "📋 Copy", 1500);
+    setTimeout(() => copyBtn.textContent = old, 1500);
   });
 });
