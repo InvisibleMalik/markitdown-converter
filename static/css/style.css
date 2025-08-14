@@ -1,18 +1,42 @@
-:root {
-  --drop-bg: #f8f9fa;
-  --accent: #0d6efd;
+:root{
+  --brand:#0d6efd;
+  --hero1:#0e2a47;
+  --hero2:#133b68;
+}
+*{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue","Noto Sans",Arial,"Apple Color Emoji","Segoe UI Emoji";}
+
+.hero{
+  background: linear-gradient(135deg,var(--hero1),var(--hero2));
+  color:#fff;
+  padding: 2.5rem 0 2rem;
+}
+.hero .navbar{ background: transparent; }
+.navbar .nav-link{ color:#dbe7ff; }
+.navbar .nav-link:hover{ color:#fff; }
+
+.task-card{ transition: transform .15s ease, box-shadow .15s ease; }
+.card-hover:hover{ transform: translateY(-2px); box-shadow:0 14px 40px rgba(2,6,23,.12); }
+.task-badge{ display:inline-block; font-size:.75rem; padding:.25rem .5rem; background:#eef4ff; color:#1d4ed8; border-radius:9999px; }
+
+.drop-area{
+  border:2px dashed rgba(13,110,253,.25);
+  background:#f8fafc;
+  border-radius:14px;
+  cursor:pointer;
+  transition: all .15s ease;
+}
+.drop-area.dragover{
+  background:#eef4ff;
+  border-color:rgba(13,110,253,.5);
+  box-shadow:0 10px 30px rgba(2,6,23,.08);
+}
+#selected-file{ font-weight:600; color:var(--brand); }
+
+.font-mono{
+  font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
 }
 
-.drop-area {
-  border: 2px dashed rgba(13,110,253,0.18);
-  background: var(--drop-bg);
-  border-radius: 12px;
-  cursor: pointer;
+.markdown-body{
+  /* GitHub Markdown container width helpers */
+  word-wrap: break-word;
 }
-.drop-area.dragover {
-  background: rgba(13,110,253,0.04);
-  border-color: rgba(13,110,253,0.4);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(2,6,23,0.06);
-}
-#selected-file { font-weight:600; color:#0d6efd; }
